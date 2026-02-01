@@ -1,4 +1,4 @@
-# Dependencies (but NOT lib/ which contains bundled pg)
+# Dependencies
 node_modules/
 
 # IDE
