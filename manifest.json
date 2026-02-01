@@ -1,0 +1,10 @@
+{
+  "id": "obsync-pg",
+  "name": "Obsync PG",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Sync your Obsidian vault to PostgreSQL database",
+  "author": "deveric",
+  "authorUrl": "https://github.com/deveric",
+  "isDesktopOnly": true
+}
