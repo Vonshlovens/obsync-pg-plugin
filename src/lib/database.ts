@@ -42,11 +42,17 @@ export class Database {
         this.pg = electronRequire('pg');
         console.log('Loaded pg module successfully');
       } catch (e: any) {
-        console.error('Failed to load pg:', e.message);
+        console.error('Failed to load pg:', e);
+        console.error('Error stack:', e.stack);
+
+        // Try to give more specific error info
+        let detail = e.message || 'Unknown error';
+        if (e.code === 'MODULE_NOT_FOUND') {
+          detail = `Module not found: ${e.message}. Required module may be missing from node_modules.`;
+        }
+
         throw new Error(
-          'Could not load PostgreSQL driver (pg). ' +
-          'Please ensure node_modules/pg exists in the plugin directory. ' +
-          'Error: ' + e.message
+          'Could not load PostgreSQL driver. ' + detail
         );
       }
 
