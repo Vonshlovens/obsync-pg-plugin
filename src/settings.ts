@@ -25,8 +25,8 @@ export class ObsyncSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
           await this.plugin.reconnect();
         },
-        onTestConnection: async () => {
-          return await this.plugin.testConnection();
+        onTestConnection: async (settings: PluginSettings) => {
+          return await this.plugin.testConnection(settings);
         },
       },
     });

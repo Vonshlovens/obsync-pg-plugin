@@ -3,7 +3,7 @@
 
   export let settings: PluginSettings;
   export let onSave: (settings: PluginSettings) => void;
-  export let onTestConnection: () => Promise<boolean>;
+  export let onTestConnection: (settings: PluginSettings) => Promise<boolean>;
 
   let testing = false;
   let testResult: boolean | null = null;
@@ -12,7 +12,8 @@
     testing = true;
     testResult = null;
     try {
-      testResult = await onTestConnection();
+      // Pass current settings to test with unsaved values
+      testResult = await onTestConnection(settings);
     } finally {
       testing = false;
     }

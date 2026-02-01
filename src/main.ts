@@ -213,10 +213,10 @@ export default class ObsyncPgPlugin extends Plugin {
   }
 
   /**
-   * Test database connection
+   * Test database connection with optional settings override
    */
-  async testConnection(): Promise<boolean> {
-    const testDb = new Database(this.settings);
+  async testConnection(settings?: PluginSettings): Promise<boolean> {
+    const testDb = new Database(settings || this.settings);
     try {
       await testDb.connect();
       await testDb.close();
