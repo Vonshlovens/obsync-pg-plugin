@@ -32,6 +32,8 @@ const context = await esbuild.context({
     "@lezer/common",
     "@lezer/highlight",
     "@lezer/lr",
+    "pg",
+    "pg-native",
     ...builtins,
   ],
   plugins: [

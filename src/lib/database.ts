@@ -1,5 +1,4 @@
-import { PluginSettings, VaultNote, VaultAttachment, SyncStatus } from './types';
-import { Notice } from 'obsidian';
+import type { PluginSettings, VaultNote, VaultAttachment, SyncStatus } from './types';
 
 /**
  * PostgreSQL database client using node-postgres
@@ -19,8 +18,45 @@ export class Database {
    */
   async connect(): Promise<void> {
     try {
-      // Dynamic import of pg module (works in Electron)
-      this.pg = require('pg');
+      // Try to load pg module from bundled lib folder or node_modules
+      const electronRequire = (window as any).require;
+      const path = electronRequire('path');
+
+      // Get the plugin's directory path
+      const pluginPath = (window as any).app?.vault?.adapter?.basePath
+        ? path.join((window as any).app.vault.adapter.basePath, '.obsidian', 'plugins', 'obsync-pg')
+        : null;
+
+      const loadPaths = [
+        pluginPath ? path.join(pluginPath, 'lib', 'pg') : null,
+        pluginPath ? path.join(pluginPath, 'node_modules', 'pg') : null,
+        'pg', // Try global/electron path
+      ].filter(Boolean);
+
+      for (const loadPath of loadPaths) {
+        try {
+          this.pg = electronRequire(loadPath);
+          console.log('Loaded pg from:', loadPath);
+          break;
+        } catch (e) {
+          console.log('Failed to load pg from', loadPath);
+        }
+      }
+
+      if (!this.pg) {
+        throw new Error(
+          'Could not load PostgreSQL driver (pg). ' +
+          'Please ensure the lib/pg folder exists in the plugin directory.'
+        );
+      }
+
+      if (!this.pg || !this.pg.Pool) {
+        throw new Error('pg module loaded but Pool is not available');
+      }
+
+      const sslConfig = this.settings.sslMode === 'disable'
+        ? false
+        : { rejectUnauthorized: false };
 
       const config = {
         host: this.settings.host,
@@ -28,27 +64,53 @@ export class Database {
         user: this.settings.user,
         password: this.settings.password,
         database: this.settings.database,
-        ssl: this.settings.sslMode === 'require' ? { rejectUnauthorized: false } : false,
+        ssl: sslConfig,
         max: 10,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
       };
 
+      console.log('Connecting to PostgreSQL:', {
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.user,
+        ssl: config.ssl ? 'enabled' : 'disabled',
+      });
+
       this.pool = new this.pg.Pool(config);
 
       // Test connection
+      console.log('Testing connection...');
       const client = await this.pool.connect();
 
       // Set search path if schema is specified
       if (this.settings.schema) {
-        await client.query(`SET search_path TO ${this.settings.schema}, public`);
+        console.log('Setting search path to schema:', this.settings.schema);
+        await client.query(`SET search_path TO "${this.settings.schema}", public`);
       }
 
       client.release();
-      console.log('Connected to PostgreSQL database');
-    } catch (error) {
+      console.log('Connected to PostgreSQL database successfully');
+    } catch (error: any) {
       console.error('Failed to connect to database:', error);
-      throw error;
+
+      // Provide more helpful error messages
+      let message = error.message || 'Unknown error';
+
+      if (message.includes('ECONNREFUSED')) {
+        message = `Connection refused. Is PostgreSQL running on ${this.settings.host}:${this.settings.port}?`;
+      } else if (message.includes('ETIMEDOUT')) {
+        message = `Connection timed out. Check if ${this.settings.host}:${this.settings.port} is reachable.`;
+      } else if (message.includes('authentication failed')) {
+        message = 'Authentication failed. Check your username and password.';
+      } else if (message.includes('does not exist')) {
+        message = `Database "${this.settings.database}" does not exist.`;
+      } else if (message.includes('SSL')) {
+        message = 'SSL connection error. Try changing SSL mode in settings.';
+      }
+
+      throw new Error(message);
     }
   }
 
@@ -87,8 +149,8 @@ export class Database {
 
     const client = await this.pool.connect();
     try {
-      await client.query(`CREATE SCHEMA IF NOT EXISTS ${this.settings.schema}`);
-      await client.query(`SET search_path TO ${this.settings.schema}, public`);
+      await client.query(`CREATE SCHEMA IF NOT EXISTS "${this.settings.schema}"`);
+      await client.query(`SET search_path TO "${this.settings.schema}", public`);
     } finally {
       client.release();
     }

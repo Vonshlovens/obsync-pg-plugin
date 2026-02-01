@@ -18,8 +18,22 @@ Sync your Obsidian vault to a PostgreSQL database in real-time. This plugin is a
 
 1. Download the latest release from GitHub
 2. Extract to your vault's `.obsidian/plugins/obsync-pg/` folder
-3. Enable the plugin in Obsidian's Community Plugins settings
-4. Configure your database connection in the plugin settings
+3. The folder should contain: `main.js`, `manifest.json`, and the `lib/` folder with pg dependencies
+4. Enable the plugin in Obsidian's Community Plugins settings
+5. Configure your database connection in the plugin settings
+
+**Required files in plugin folder:**
+```
+.obsidian/plugins/obsync-pg/
+├── main.js
+├── manifest.json
+└── lib/
+    ├── pg/
+    ├── pg-pool/
+    ├── pg-protocol/
+    ├── pg-types/
+    └── ... (other pg dependencies)
+```
 
 ## Database Setup
 

@@ -1,8 +1,4 @@
-# Build output
-main.js
-*.js.map
-
-# Dependencies
+# Dependencies (but NOT lib/ which contains bundled pg)
 node_modules/
 
 # IDE
