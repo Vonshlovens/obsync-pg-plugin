@@ -21,25 +21,22 @@ export class Database {
       // Try to load pg module - need to set up module resolution for bundled deps
       const electronRequire = (window as any).require;
       const path = electronRequire('path');
-      const Module = electronRequire('module');
+      const { createRequire } = electronRequire('module');
 
       // Get the plugin's directory path
       const pluginPath = (window as any).app?.vault?.adapter?.basePath
         ? path.join((window as any).app.vault.adapter.basePath, '.obsidian', 'plugins', 'obsync-pg')
         : null;
 
-      if (pluginPath) {
-        // Add the plugin's node_modules to the module search path
-        const nodeModulesPath = path.join(pluginPath, 'node_modules');
-        if (!Module.globalPaths.includes(nodeModulesPath)) {
-          Module.globalPaths.unshift(nodeModulesPath);
-          console.log('Added to module paths:', nodeModulesPath);
-        }
+      if (!pluginPath) {
+        throw new Error('Could not determine plugin path');
       }
 
-      // Now try to load pg
+      // Now try to load pg using createRequire from the plugin's path
       try {
-        this.pg = electronRequire('pg');
+        // Create a require function that resolves from the plugin's directory
+        const pluginRequire = createRequire(path.join(pluginPath, 'main.js'));
+        this.pg = pluginRequire('pg');
         console.log('Loaded pg module successfully');
       } catch (e: any) {
         console.error('Failed to load pg:', e);
