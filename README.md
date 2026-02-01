@@ -16,13 +16,33 @@ Sync your Obsidian vault to a PostgreSQL database in real-time. This plugin is a
 
 ## Installation
 
-1. Download the latest release from GitHub
-2. Extract to your vault's `.obsidian/plugins/obsync-pg/` folder
-3. The folder should contain: `main.js`, `manifest.json`, and `node_modules/` with pg dependencies
-4. Enable the plugin in Obsidian's Community Plugins settings
-5. Configure your database connection in the plugin settings
+### From Release (Recommended)
 
-**Required files in plugin folder:**
+1. Download the latest release zip from [GitHub Releases](https://github.com/Vonshlovens/obsync-pg-plugin/releases)
+2. Extract the `obsync-pg` folder to your vault's `.obsidian/plugins/` directory
+3. Enable the plugin in Obsidian's Community Plugins settings
+4. Configure your database connection in the plugin settings
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/Vonshlovens/obsync-pg-plugin.git
+cd obsync-pg-plugin
+
+# Install dependencies
+npm install
+
+# Build the release (creates dist/obsync-pg/)
+npm run release
+
+# Copy to your vault
+cp -r dist/obsync-pg /path/to/vault/.obsidian/plugins/
+```
+
+### Plugin Structure
+
+The installed plugin folder should contain:
 ```
 .obsidian/plugins/obsync-pg/
 ├── main.js
@@ -35,6 +55,8 @@ Sync your Obsidian vault to a PostgreSQL database in real-time. This plugin is a
     ├── pgpass/
     └── ... (other pg dependencies)
 ```
+
+**Note:** The `node_modules/` folder with pg dependencies is required. The plugin uses native PostgreSQL drivers that cannot be bundled into main.js.
 
 ## Database Setup
 
