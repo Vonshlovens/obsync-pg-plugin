@@ -18,35 +18,35 @@ export class Database {
    */
   async connect(): Promise<void> {
     try {
-      // Try to load pg module from bundled lib folder or node_modules
+      // Try to load pg module - need to set up module resolution for bundled deps
       const electronRequire = (window as any).require;
       const path = electronRequire('path');
+      const Module = electronRequire('module');
 
       // Get the plugin's directory path
       const pluginPath = (window as any).app?.vault?.adapter?.basePath
         ? path.join((window as any).app.vault.adapter.basePath, '.obsidian', 'plugins', 'obsync-pg')
         : null;
 
-      const loadPaths = [
-        pluginPath ? path.join(pluginPath, 'lib', 'pg') : null,
-        pluginPath ? path.join(pluginPath, 'node_modules', 'pg') : null,
-        'pg', // Try global/electron path
-      ].filter(Boolean);
-
-      for (const loadPath of loadPaths) {
-        try {
-          this.pg = electronRequire(loadPath);
-          console.log('Loaded pg from:', loadPath);
-          break;
-        } catch (e) {
-          console.log('Failed to load pg from', loadPath);
+      if (pluginPath) {
+        // Add the plugin's node_modules to the module search path
+        const nodeModulesPath = path.join(pluginPath, 'node_modules');
+        if (!Module.globalPaths.includes(nodeModulesPath)) {
+          Module.globalPaths.unshift(nodeModulesPath);
+          console.log('Added to module paths:', nodeModulesPath);
         }
       }
 
-      if (!this.pg) {
+      // Now try to load pg
+      try {
+        this.pg = electronRequire('pg');
+        console.log('Loaded pg module successfully');
+      } catch (e: any) {
+        console.error('Failed to load pg:', e.message);
         throw new Error(
           'Could not load PostgreSQL driver (pg). ' +
-          'Please ensure the lib/pg folder exists in the plugin directory.'
+          'Please ensure node_modules/pg exists in the plugin directory. ' +
+          'Error: ' + e.message
         );
       }
 
