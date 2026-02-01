@@ -469,6 +469,97 @@ export class SyncEngine {
   }
 
   /**
+   * Periodic pull from database with conflict resolution
+   * Only pulls files that are newer in the database than locally
+   */
+  async periodicPull(): Promise<void> {
+    if (this.isRunning) {
+      return; // Skip if sync is already in progress
+    }
+
+    try {
+      const notes = await this.db.getAllNotes();
+      const attachments = await this.db.getAllAttachments();
+
+      let pulled = 0;
+
+      // Check and pull notes
+      for (const note of notes) {
+        const file = this.app.vault.getAbstractFileByPath(note.path);
+
+        if (file instanceof TFile) {
+          // File exists locally - check if DB version is newer
+          const content = await this.app.vault.read(file);
+          const localHash = hashContent(content);
+
+          // If hashes are the same, no need to compare timestamps
+          if (localHash === note.contentHash) {
+            continue;
+          }
+
+          // Hashes differ - compare timestamps
+          const localMtime = file.stat.mtime;
+          const dbMtime = note.modifiedAt ? note.modifiedAt.getTime() : 0;
+
+          // Only pull if DB version is newer
+          if (dbMtime <= localMtime) {
+            continue;
+          }
+        }
+
+        // Pull the file (either doesn't exist locally or DB version is newer)
+        const dir = note.path.substring(0, note.path.lastIndexOf('/'));
+        if (dir) {
+          await this.ensureFolder(dir);
+        }
+
+        await this.app.vault.adapter.write(note.path, note.rawContent);
+        pulled++;
+      }
+
+      // Check and pull attachments
+      for (const att of attachments) {
+        const file = this.app.vault.getAbstractFileByPath(att.path);
+
+        if (file instanceof TFile) {
+          // File exists locally - check if DB version is newer
+          const data = await this.app.vault.readBinary(file);
+          const localHash = hashArrayBuffer(data);
+
+          // If hashes are the same, no need to compare timestamps
+          if (localHash === att.contentHash) {
+            continue;
+          }
+
+          // Hashes differ - compare timestamps using synced_at as proxy for modification time
+          const localMtime = file.stat.mtime;
+          const dbMtime = att.syncedAt ? att.syncedAt.getTime() : 0;
+
+          // Only pull if DB version is newer
+          if (dbMtime <= localMtime) {
+            continue;
+          }
+        }
+
+        // Pull the file (either doesn't exist locally or DB version is newer)
+        const dir = att.path.substring(0, att.path.lastIndexOf('/'));
+        if (dir) {
+          await this.ensureFolder(dir);
+        }
+
+        await this.app.vault.adapter.writeBinary(att.path, att.data);
+        pulled++;
+      }
+
+      if (pulled > 0) {
+        console.log(`Periodic pull: ${pulled} files updated from database`);
+      }
+    } catch (error) {
+      console.error('Periodic pull failed:', error);
+    }
+  }
+
+  /**
    * Ensure a folder exists
    */
   private async ensureFolder(path: string): Promise<void> {

@@ -16,6 +16,7 @@ export default class ObsyncPgPlugin extends Plugin {
   private statusCallbacks: ((status: SyncStatus) => void)[] = [];
   private saveInterval: ReturnType<typeof setInterval> | null = null;
   private retryInterval: ReturnType<typeof setInterval> | null = null;
+  private pullInterval: ReturnType<typeof setInterval> | null = null;
 
   async onload(): Promise<void> {
     console.log('Loading Obsync PG plugin');
@@ -76,6 +77,9 @@ export default class ObsyncPgPlugin extends Plugin {
     }
     if (this.retryInterval) {
       clearInterval(this.retryInterval);
+    }
+    if (this.pullInterval) {
+      clearInterval(this.pullInterval);
     }
 
     // Flush pending events and save state
@@ -166,6 +170,11 @@ export default class ObsyncPgPlugin extends Plugin {
         this.engine?.retryFailed();
       }, 30000);
 
+      // Set up periodic pull interval
+      this.pullInterval = setInterval(() => {
+        this.engine?.periodicPull();
+      }, 30000);
+
       // Sync on startup if enabled
       if (this.settings.syncOnStartup) {
         // Delay a bit to let Obsidian finish loading
@@ -204,6 +213,10 @@ export default class ObsyncPgPlugin extends Plugin {
     if (this.retryInterval) {
       clearInterval(this.retryInterval);
       this.retryInterval = null;
+    }
+    if (this.pullInterval) {
+      clearInterval(this.pullInterval);
+      this.pullInterval = null;
     }
 
     // Reconnect if configured
